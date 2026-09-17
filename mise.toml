@@ -1,0 +1,36 @@
+[tools]
+go = "1.26.8"
+
+[env]
+CGO_ENABLED = "0"
+
+[tasks.build]
+description = "Build the binary"
+run = "go build -o go-laya-mlx ."
+
+[tasks.test]
+description = "Run tests"
+run = "go test ./..."
+
+[tasks.vet]
+description = "Run go vet"
+run = "go vet ./..."
+
+[tasks.fmt-check]
+description = "Check Go formatting"
+run = '''
+files="$(gofmt -l .)"
+if [ -n "$files" ]; then
+  echo "$files"
+  exit 1
+fi
+'''
+
+[tasks.check]
+description = "Run all checks and build"
+run = [
+  "mise run fmt-check",
+  "mise run vet",
+  "mise run test",
+  "mise run build",
+]

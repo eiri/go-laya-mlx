@@ -1,0 +1,3 @@
+/go-laya-mlx
+*.test
+coverage.out
