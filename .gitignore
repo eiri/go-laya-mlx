@@ -1,3 +1,4 @@
 /go-laya-mlx
+/.build/
 *.test
 coverage.out

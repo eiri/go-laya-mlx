@@ -2,7 +2,11 @@
 go = "1.26.8"
 
 [env]
-CGO_ENABLED = "0"
+CGO_ENABLED = "1"
+
+[tasks.native]
+description = "Build pinned MLX C and MLX with Metal"
+run = "./scripts/build-mlx.sh"
 
 [tasks.build]
 description = "Build the binary"
