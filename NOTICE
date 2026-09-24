@@ -1,0 +1,10 @@
+Prompt construction and option rendering are adapted from laya-mlx:
+https://github.com/mizorewww/laya-mlx
+Copyright 2026 laya-mlx contributors. Licensed under Apache-2.0.
+See THIRD_PARTY_LICENSES/laya-mlx.txt.
+
+Laya's prompt format originates from Laya:
+https://github.com/NandhaKishorM/laya
+Copyright Convai Innovations and Laya contributors. Licensed under Apache-2.0.
+
+Model weights are stored separately and are not part of this repository.

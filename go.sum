@@ -1,0 +1,4 @@
+github.com/surya-mp/go-tokenizer v0.1.4 h1:wJTcCMQy8w2aWzFFrv1vT2y4FK0LkQscYJ9bQukPHkI=
+github.com/surya-mp/go-tokenizer v0.1.4/go.mod h1:8oTpLi9lfZdwjSIrXsWu1d48UWOv19bXt7n4Xn+Cl6A=
+golang.org/x/text v0.42.0 h1:JbOZXgfeCPU9gacVtYliJqOhD+zhrEqK4LfdpmlUZqI=
+golang.org/x/text v0.42.0/go.mod h1:ojzP1Z+2QtioaF8DTtO8K5q7JWVVYwZKenzujK0Zd0E=
