@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -121,9 +122,12 @@ func TestTruncated(t *testing.T) {
 }
 
 func TestLocalCheckpoint(t *testing.T) {
-	dir := os.Getenv("LAYA_MODEL_DIR")
-	if dir == "" {
-		t.Skip("set LAYA_MODEL_DIR to test the cached checkpoint")
+	dir, err := Cached()
+	if errors.Is(err, os.ErrNotExist) {
+		t.Skip("aac6fef/laya-mlx is not cached")
+	}
+	if err != nil {
+		t.Fatal(err)
 	}
 	c, err := Load(dir)
 	if err != nil {

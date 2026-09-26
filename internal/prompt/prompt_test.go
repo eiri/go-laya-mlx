@@ -2,11 +2,14 @@ package prompt
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/eiri/go-laya-mlx/internal/checkpoint"
 )
 
 func tinyTokenizer(t *testing.T) *Tokenizer {
@@ -80,9 +83,12 @@ func TestNoulOptions(t *testing.T) {
 }
 
 func TestCachedTokens(t *testing.T) {
-	dir := os.Getenv("LAYA_MODEL_DIR")
-	if dir == "" {
-		t.Skip("set LAYA_MODEL_DIR to test the cached checkpoint")
+	dir, err := checkpoint.Cached()
+	if errors.Is(err, os.ErrNotExist) {
+		t.Skip("aac6fef/laya-mlx is not cached")
+	}
+	if err != nil {
+		t.Fatal(err)
 	}
 	tok, err := NewTokenizer(filepath.Join(dir, "tokenizer"))
 	if err != nil {
