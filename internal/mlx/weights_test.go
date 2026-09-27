@@ -44,6 +44,34 @@ func TestWeights(t *testing.T) {
 		}
 	}
 
+	encoded, err := w.Encode([]int{50281, 12092})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(encoded) != len(emb) {
+		t.Fatalf("encoder size: %d", len(encoded))
+	}
+	for i, want := range []float32{-0.08642578, 0.00811768, 0.11743164, 0.01523590} {
+		if diff := encoded[i] - want; diff < -0.002 || diff > 0.002 {
+			t.Fatalf("encoder[%d] = %g, want %g", i, encoded[i], want)
+		}
+	}
+
+	long := make([]int, 130)
+	long[0] = 50281
+	for i := 1; i < len(long); i++ {
+		long[i] = 12092
+	}
+	encoded, err = w.Encode(long)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i, want := range []float32{-0.1553955, 0.30688477, -1.40722656, -0.87060547} {
+		if diff := encoded[i] - want; diff < -0.03 || diff > 0.03 {
+			t.Fatalf("long encoder[%d] = %g, want %g", i, encoded[i], want)
+		}
+	}
+
 	// Calls from other goroutines must not reuse a thread-affine MLX stream.
 	var group sync.WaitGroup
 	for range 4 {

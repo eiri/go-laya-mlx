@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"path/filepath"
 	"sort"
@@ -15,17 +16,25 @@ const maxHeader = 16 << 20
 
 // Encoder holds the dimensions needed to match checkpoint weights.
 type Encoder struct {
-	ModelType         string `json:"model_type"`
-	VocabSize         int    `json:"vocab_size"`
-	HiddenSize        int    `json:"hidden_size"`
-	IntermediateSize  int    `json:"intermediate_size"`
-	NumHiddenLayers   int    `json:"num_hidden_layers"`
-	NumAttentionHeads int    `json:"num_attention_heads"`
-	MaxPositions      int    `json:"max_position_embeddings"`
-	NormBias          bool   `json:"norm_bias"`
-	AttentionBias     bool   `json:"attention_bias"`
-	MLPBias           bool   `json:"mlp_bias"`
-	Activation        string `json:"hidden_activation"`
+	ModelType         string   `json:"model_type"`
+	VocabSize         int      `json:"vocab_size"`
+	HiddenSize        int      `json:"hidden_size"`
+	IntermediateSize  int      `json:"intermediate_size"`
+	NumHiddenLayers   int      `json:"num_hidden_layers"`
+	NumAttentionHeads int      `json:"num_attention_heads"`
+	MaxPositions      int      `json:"max_position_embeddings"`
+	NormBias          bool     `json:"norm_bias"`
+	AttentionBias     bool     `json:"attention_bias"`
+	MLPBias           bool     `json:"mlp_bias"`
+	Activation        string   `json:"hidden_activation"`
+	NormEps           float32  `json:"norm_eps"`
+	LocalAttention    int      `json:"local_attention"`
+	GlobalEvery       int      `json:"global_attn_every_n_layers"`
+	LayerTypes        []string `json:"layer_types"`
+	Rope              map[string]struct {
+		Theta float32 `json:"rope_theta"`
+		Type  string  `json:"rope_type"`
+	} `json:"rope_parameters"`
 }
 
 type Agent struct {
@@ -123,6 +132,20 @@ func validateConfig(c *Checkpoint) error {
 		e.NumAttentionHeads < 1 || e.HiddenSize%e.NumAttentionHeads != 0 || (e.HiddenSize/e.NumAttentionHeads)%2 != 0 ||
 		e.MaxPositions < 1 {
 		return fmt.Errorf("unsupported encoder configuration")
+	}
+	if e.NormEps < 0 || math.IsNaN(float64(e.NormEps)) || e.LocalAttention < 0 || e.GlobalEvery < 0 ||
+		(len(e.LayerTypes) != 0 && len(e.LayerTypes) != e.NumHiddenLayers) {
+		return fmt.Errorf("invalid encoder attention settings")
+	}
+	for _, kind := range e.LayerTypes {
+		if kind != "full_attention" && kind != "sliding_attention" {
+			return fmt.Errorf("unsupported attention type %q", kind)
+		}
+	}
+	for _, params := range e.Rope {
+		if params.Type != "" && params.Type != "default" || params.Theta < 0 || math.IsNaN(float64(params.Theta)) {
+			return fmt.Errorf("unsupported RoPE settings")
+		}
 	}
 	if a.Encoder == "" || a.HeadLayers < 1 || a.HeadLayers > 32 ||
 		len(a.ActCosts) != 1 || a.ActCosts["escalate"] == 0 ||
