@@ -97,7 +97,7 @@ func (g *graph) unary(op string, a C.mlx_array) C.mlx_array {
 	case "erf":
 		status = C.mlx_erf(&out, a, g.w.stream)
 	case "relu":
-		status = C.mlx_maximum(&out, a, g.scalar(0), g.w.stream)
+		status = C.mlx_maximum(&out, a, g.cast(g.scalar(0), C.MLX_FLOAT16), g.w.stream)
 	default:
 		g.err = fmt.Errorf("unknown operation %s", op)
 		return out
@@ -159,12 +159,23 @@ func (g *graph) take(a, indices C.mlx_array, axis int) C.mlx_array {
 }
 
 func (g *graph) norm(a C.mlx_array, weight string, eps float32) C.mlx_array {
+	return g.normWithBias(a, weight, "", eps)
+}
+
+func (g *graph) normWithBias(a C.mlx_array, weight, bias string, eps float32) C.mlx_array {
 	if g.err != nil {
 		return C.mlx_array{}
 	}
 	w := g.weight(weight)
+	b := C.mlx_array{}
+	if bias != "" {
+		b = g.weight(bias)
+	}
+	if g.err != nil {
+		return C.mlx_array{}
+	}
 	var out C.mlx_array
-	return g.own(&out, C.mlx_fast_layer_norm(&out, a, w, C.mlx_array{}, C.float(eps), g.w.stream), "layer norm")
+	return g.own(&out, C.mlx_fast_layer_norm(&out, a, w, b, C.float(eps), g.w.stream), "layer norm")
 }
 
 func (g *graph) linear(a C.mlx_array, weight string) C.mlx_array {
@@ -178,6 +189,18 @@ func (g *graph) linear(a C.mlx_array, weight string) C.mlx_array {
 		return C.mlx_array{}
 	}
 	return g.own(&out, C.mlx_matmul(&out, a, transposed, g.w.stream), "matmul")
+}
+
+func (g *graph) linearBias(a C.mlx_array, prefix string) C.mlx_array {
+	return g.binary("add", g.linear(a, prefix+".weight"), g.weight(prefix+".bias"))
+}
+
+func (g *graph) cast(a C.mlx_array, dtype C.mlx_dtype) C.mlx_array {
+	if g.err != nil {
+		return C.mlx_array{}
+	}
+	var out C.mlx_array
+	return g.own(&out, C.mlx_astype(&out, a, dtype, g.w.stream), "cast")
 }
 
 func (g *graph) gelu(a C.mlx_array) C.mlx_array {

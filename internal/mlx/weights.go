@@ -23,6 +23,7 @@ type Weights struct {
 	stream   C.mlx_stream
 	ioStream C.mlx_stream
 	Config   checkpoint.Encoder
+	Agent    checkpoint.Agent
 	names    map[string]struct{}
 	closed   bool
 }
@@ -42,7 +43,7 @@ func LoadWeights() (_ *Weights, err error) {
 	// A global stream allows locked calls from different Go threads.
 	device := C.mlx_device_new_type(C.MLX_GPU, 0)
 	defer C.mlx_device_free(device)
-	w := &Weights{Config: c.Encoder, names: make(map[string]struct{}, len(c.Tensors))}
+	w := &Weights{Config: c.Encoder, Agent: c.Agent, names: make(map[string]struct{}, len(c.Tensors))}
 	for name := range c.Tensors {
 		w.names[name] = struct{}{}
 	}

@@ -12,18 +12,30 @@ import (
 	"unsafe"
 )
 
-// Encode runs the bidirectional ModernBERT encoder on one unpadded sequence.
-// The result is row-major FP32 with shape [len(ids), hidden_size].
+// Encode runs ModernBERT on one unpadded sequence and returns row-major FP32.
 func (w *Weights) Encode(ids []int) ([]float32, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
+	x, err := w.encode(ids)
+	if err != nil {
+		return nil, err
+	}
+	defer C.mlx_array_free(x)
+	g := &graph{w: w}
+	defer g.close()
+	return g.output(x)
+}
+
+// encode keeps the final hidden states in FP16 for the decision layers.
+// The caller holds w.mu and owns the returned array.
+func (w *Weights) encode(ids []int) (C.mlx_array, error) {
 	if w.closed || len(ids) == 0 || len(ids) > w.Config.MaxPositions {
-		return nil, fmt.Errorf("model closed or invalid sequence length")
+		return C.mlx_array{}, fmt.Errorf("model closed or invalid sequence length")
 	}
 	input := make([]C.int32_t, len(ids))
 	for i, id := range ids {
 		if id < 0 || id >= w.Config.VocabSize {
-			return nil, fmt.Errorf("invalid token ID %d", id)
+			return C.mlx_array{}, fmt.Errorf("invalid token ID %d", id)
 		}
 		input[i] = C.int32_t(id)
 	}
@@ -33,17 +45,17 @@ func (w *Weights) Encode(ids []int) ([]float32, error) {
 	x = g.norm(x, "encoder.embeddings.norm.weight", w.normEps())
 	if g.err != nil {
 		g.close()
-		return nil, g.err
+		return C.mlx_array{}, g.err
 	}
 	var kept C.mlx_array
 	if C.mlx_array_set(&kept, x) != 0 {
 		g.close()
-		return nil, fmt.Errorf("cannot retain embeddings")
+		return kept, fmt.Errorf("cannot retain embeddings")
 	}
 	g.close()
 	x = kept
 
-	// Each block is evaluated before its graph is freed to bound memory use.
+	// Evaluate each block before freeing its graph to limit memory use.
 	for layer := range w.Config.NumHiddenLayers {
 		g = &graph{w: w}
 		next := w.encLayer(g, x, layer, len(ids))
@@ -53,22 +65,38 @@ func (w *Weights) Encode(ids []int) ([]float32, error) {
 		if g.err != nil {
 			g.close()
 			C.mlx_array_free(x)
-			return nil, g.err
+			return C.mlx_array{}, g.err
 		}
 		var saved C.mlx_array
 		if C.mlx_array_set(&saved, next) != 0 {
 			g.close()
 			C.mlx_array_free(x)
-			return nil, fmt.Errorf("cannot retain encoder layer %d", layer)
+			return saved, fmt.Errorf("cannot retain encoder layer %d", layer)
 		}
 		g.close()
 		C.mlx_array_free(x)
 		x = saved
 	}
-	defer C.mlx_array_free(x)
+
 	g = &graph{w: w}
-	defer g.close()
-	return g.output(g.norm(x, "encoder.final_norm.weight", w.normEps()))
+	normalized := g.norm(x, "encoder.final_norm.weight", w.normEps())
+	if g.err == nil && C.mlx_array_eval(normalized) != 0 {
+		g.err = fmt.Errorf("encoder final normalization failed")
+	}
+	if g.err != nil {
+		g.close()
+		C.mlx_array_free(x)
+		return C.mlx_array{}, g.err
+	}
+	var result C.mlx_array
+	if C.mlx_array_set(&result, normalized) != 0 {
+		g.close()
+		C.mlx_array_free(x)
+		return result, fmt.Errorf("cannot retain encoder output")
+	}
+	g.close()
+	C.mlx_array_free(x)
+	return result, nil
 }
 
 func (w *Weights) normEps() float32 {
