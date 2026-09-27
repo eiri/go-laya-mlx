@@ -38,11 +38,13 @@ type Encoder struct {
 }
 
 type Agent struct {
-	Encoder    string             `json:"encoder"`
-	HeadLayers int                `json:"head_layers"`
-	MaxLen     int                `json:"max_len"`
-	HeadMaxLen int                `json:"head_max_len"`
-	ActCosts   map[string]float64 `json:"act_costs"`
+	Encoder          string             `json:"encoder"`
+	HeadLayers       int                `json:"head_layers"`
+	MaxLen           int                `json:"max_len"`
+	HeadMaxLen       int                `json:"head_max_len"`
+	ActCosts         map[string]float64 `json:"act_costs"`
+	Temperature      []float64          `json:"temperature"`
+	TemperatureByOpt map[string]float64 `json:"temperature_by_options"`
 }
 
 type Format struct {
@@ -151,6 +153,19 @@ func validateConfig(c *Checkpoint) error {
 		len(a.ActCosts) != 1 || a.ActCosts["escalate"] == 0 ||
 		a.MaxLen > e.MaxPositions || a.HeadMaxLen <= 4 || a.HeadMaxLen >= a.MaxLen {
 		return fmt.Errorf("unsupported agent configuration")
+	}
+	if len(a.Temperature) != 0 && len(a.Temperature) != 3 {
+		return fmt.Errorf("expected three calibration temperatures")
+	}
+	for _, temp := range a.Temperature {
+		if temp <= 0 || math.IsNaN(temp) || math.IsInf(temp, 0) {
+			return fmt.Errorf("invalid calibration temperature")
+		}
+	}
+	for _, temp := range a.TemperatureByOpt {
+		if temp <= 0 || math.IsNaN(temp) || math.IsInf(temp, 0) {
+			return fmt.Errorf("invalid option calibration temperature")
+		}
 	}
 	return nil
 }

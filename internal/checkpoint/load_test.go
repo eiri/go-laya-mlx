@@ -99,6 +99,30 @@ func TestInvalidTensor(t *testing.T) {
 	}
 }
 
+func TestInvalidTemperature(t *testing.T) {
+	dir := fixture(t, nil)
+	path := filepath.Join(dir, "rl_agent_config.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var agent Agent
+	if err := json.Unmarshal(data, &agent); err != nil {
+		t.Fatal(err)
+	}
+	agent.TemperatureByOpt = map[string]float64{"choice:11+": -1}
+	data, err = json.Marshal(agent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Load(dir); err == nil {
+		t.Fatal("accepted invalid temperature")
+	}
+}
+
 func TestDuplicateHeader(t *testing.T) {
 	var c Checkpoint
 	if err := c.parseHeader([]byte(`{"temperature":{},"temperature":{}}`)); err == nil {
