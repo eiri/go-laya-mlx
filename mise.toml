@@ -9,16 +9,16 @@ description = "Build pinned MLX C and MLX with Metal"
 run = "./scripts/build-mlx.sh"
 
 [tasks.build]
-description = "Build the binary"
-run = "go build -o go-laya-mlx ."
+description = "Build the library"
+run = "./scripts/with-mlx.sh go build ./..."
 
 [tasks.test]
 description = "Run tests"
-run = "go test ./..."
+run = "./scripts/with-mlx.sh go test ./..."
 
 [tasks.vet]
 description = "Run go vet"
-run = "go vet ./..."
+run = "./scripts/with-mlx.sh go vet ./..."
 
 [tasks.fmt-check]
 description = "Check Go formatting"

@@ -1,8 +1,7 @@
 package mlx
 
 /*
-#cgo darwin,arm64 CFLAGS: -I${SRCDIR}/../../.build/mlx/include
-#cgo darwin,arm64 LDFLAGS: -L${SRCDIR}/../../.build/mlx/lib -lmlxc -Wl,-rpath,${SRCDIR}/../../.build/mlx/lib
+#cgo darwin,arm64 LDFLAGS: -lmlxc
 #include "mlx/c/mlx.h"
 */
 import "C"
