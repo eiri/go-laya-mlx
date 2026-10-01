@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"strings"
 )
 
@@ -205,7 +206,8 @@ func Prepare(tok *Tokenizer, state any, q Question, maxLen, headMaxLen int) (Seq
 	room := max(0, maxLen-len(ids)-1)
 	kept := stateIDs
 	if len(kept) > room {
-		if _, isConversation := state.([]any); isConversation {
+		kind := reflect.ValueOf(state).Kind()
+		if kind == reflect.Slice || kind == reflect.Array {
 			kept = kept[len(kept)-room:]
 		} else {
 			kept = kept[:room]
