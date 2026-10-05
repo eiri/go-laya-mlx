@@ -71,6 +71,27 @@ func TestPrepare(t *testing.T) {
 	}
 }
 
+func TestOptionBudget(t *testing.T) {
+	tok := tinyTokenizer(t)
+	q := Question{Type: "choice", Instructions: "Pick"}
+	for range 125 {
+		q.Options = append(q.Options, Option{Label: "a", Description: "abcd"})
+	}
+	seq, err := Prepare(tok, nil, q, 512, 192)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(seq.IDs) != 512 || seq.IDs[len(seq.IDs)-1] != tok.SEP {
+		t.Fatalf("expected complete sequence at limit, got %d tokens", len(seq.IDs))
+	}
+
+	// A further option would fit its marker but lose its text.
+	q.Options = append(q.Options, Option{Label: "a", Description: "abcd"})
+	if _, err := Prepare(tok, nil, q, 512, 192); err == nil {
+		t.Fatal("accepted truncated option")
+	}
+}
+
 func TestNoulOptions(t *testing.T) {
 	got, err := options(Question{Type: "noul"})
 	if err != nil {

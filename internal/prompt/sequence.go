@@ -194,6 +194,10 @@ func Prepare(tok *Tokenizer, state any, q Question, maxLen, headMaxLen int) (Seq
 		ids = append(ids, opt...)
 	}
 	ids = append(ids, tok.SEP)
+	// Keep the full option section and reserve one final separator.
+	if len(ids)+1 > maxLen {
+		return Sequence{}, fmt.Errorf("too many options for token budget")
+	}
 
 	text, err := serialize(state)
 	if err != nil {
@@ -215,17 +219,5 @@ func Prepare(tok *Tokenizer, state any, q Question, maxLen, headMaxLen int) (Seq
 	}
 	ids = append(ids, kept...)
 	ids = append(ids, tok.SEP)
-	if len(ids) > maxLen {
-		ids = ids[:maxLen]
-	}
-	var valid []int
-	for _, marker := range markers {
-		if marker < maxLen {
-			valid = append(valid, marker)
-		}
-	}
-	if len(valid) != len(markers) {
-		return Sequence{}, fmt.Errorf("too many options for token budget")
-	}
-	return Sequence{IDs: ids, Markers: valid, StateTokens: len(stateIDs), StateDropped: len(stateIDs) - len(kept)}, nil
+	return Sequence{IDs: ids, Markers: markers, StateTokens: len(stateIDs), StateDropped: len(stateIDs) - len(kept)}, nil
 }
